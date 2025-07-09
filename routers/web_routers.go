@@ -3,7 +3,8 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
-
+	"github.com/link1st/gowebsocket/v2/controllers/fileControl"
+	"github.com/link1st/gowebsocket/v2/controllers/group"
 	"github.com/link1st/gowebsocket/v2/controllers/home"
 	"github.com/link1st/gowebsocket/v2/controllers/systems"
 	"github.com/link1st/gowebsocket/v2/controllers/user"
@@ -20,6 +21,9 @@ func Init(router *gin.Engine) {
 		userRouter.GET("/online", user.Online)
 		userRouter.POST("/sendMessage", user.SendMessage)
 		userRouter.POST("/sendMessageAll", user.SendMessageAll)
+		userRouter.POST("/sendMessageGroup", user.SendMessageGroup)
+		userRouter.GET("/friends", user.FriendList)
+		userRouter.GET("/messages", user.MessagesList)
 	}
 
 	// 系统
@@ -32,5 +36,20 @@ func Init(router *gin.Engine) {
 	homeRouter := router.Group("/home")
 	{
 		homeRouter.GET("/index", home.Index)
+	}
+	fileRouter := router.Group("/file")
+	{
+		fileRouter.POST("/upload", fileControl.UploadPic)
+	}
+
+	//群组
+	groupRouter := router.Group("/group")
+	{
+		groupRouter.POST("/create", group.CreateGroup)
+		groupRouter.POST("/addMember", group.AddGroupMember)
+		groupRouter.POST("/deleteMember", group.DeleteGroupMember)
+		groupRouter.GET("/list", group.GroupList)
+		groupRouter.GET("/memberList", group.GroupMemberList)
+		groupRouter.GET("/messages", user.GroupMessagesList)
 	}
 }

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/link1st/gowebsocket/v2/models/message"
+	"strings"
 	"time"
 
 	"github.com/link1st/gowebsocket/v2/common"
@@ -33,10 +35,10 @@ func LoginController(client *Client, seq string, message []byte) (code uint32, m
 		return
 	}
 	fmt.Println("webSocket_request 用户登录", seq, "ServiceToken", request.ServiceToken)
-
+	request.UserID = strings.ToLower(request.UserID)
 	// TODO::进行用户权限认证，一般是客户端传入TOKEN，然后检验TOKEN是否合法，通过TOKEN解析出来用户ID
 	// 本项目只是演示，所以直接过去客户端传入的用户ID
-	if request.UserID == "" || len(request.UserID) >= 20 {
+	if request.UserID == "" || len(request.UserID) >= 66 {
 		code = common.UnauthorizedUserID
 		fmt.Println("用户登录 非法的用户", seq, request.UserID)
 		return
@@ -54,7 +56,7 @@ func LoginController(client *Client, seq string, message []byte) (code uint32, m
 	client.Login(request.AppID, request.UserID, currentTime)
 
 	// 存储数据
-	userOnline := models.UserLogin(serverIp, serverPort, request.AppID, request.UserID, client.Addr, currentTime)
+	userOnline := models.UserLogin(serverIp, serverPort, request.AppID, request.UserID, client.Addr, currentTime, request.Nickname, request.AvatarUrl)
 	err := cache.SetUserOnlineInfo(client.GetKey(), userOnline)
 	if err != nil {
 		code = common.ServerError
@@ -70,7 +72,8 @@ func LoginController(client *Client, seq string, message []byte) (code uint32, m
 	}
 	clientManager.Login <- login
 	fmt.Println("用户登录 成功", seq, client.Addr, request.UserID)
-
+	//发送缓存数据
+	go SendCacheMsg(client)
 	return
 }
 
@@ -111,4 +114,27 @@ func HeartbeatController(client *Client, seq string, message []byte) (code uint3
 		return
 	}
 	return
+}
+
+func SendCacheMsg(client *Client) {
+	cacheMsg, err := cache.PopAllOfflineMsgs(client.GetKey())
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return
+		}
+		fmt.Println("SendCacheMsg", err)
+		return
+	}
+	for _, msg := range cacheMsg {
+		msgStr, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Println("SendCacheMsg", err)
+			continue
+		}
+		client.SendMsg(msgStr)
+		//更新消息状态
+		mess := message.Message{}
+		mess.UpdateStatus(msg.Seq, message.MsgSendStatusSuccess)
+	}
+
 }

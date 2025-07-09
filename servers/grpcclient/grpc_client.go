@@ -87,7 +87,7 @@ func GetUserList(server *models.Server, appID uint32) (userIDs []string, err err
 
 // SendMsg 发送消息
 // link::https://github.com/grpc/grpc-go/blob/master/examples/helloworld/greeter_client/main.go
-func SendMsg(server *models.Server, seq string, appID uint32, userID string, cmd string, msgType string,
+func SendMsg(server *models.Server, seq string, appID uint32, fromUserId string, targetUserID string, cmd string, msgType string,
 	message string) (sendMsgID string, err error) {
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(server.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -100,13 +100,14 @@ func SendMsg(server *models.Server, seq string, appID uint32, userID string, cmd
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	req := protobuf.SendMsgReq{
-		Seq:     seq,
-		AppID:   appID,
-		UserID:  userID,
-		Cms:     cmd,
-		Type:    msgType,
-		Msg:     message,
-		IsLocal: false,
+		Seq:          seq,
+		AppID:        appID,
+		FromUserId:   fromUserId,
+		Cms:          cmd,
+		Type:         msgType,
+		Msg:          message,
+		IsLocal:      false,
+		TargetUserId: targetUserID,
 	}
 	rsp, err := c.SendMsg(ctx, &req)
 	if err != nil {

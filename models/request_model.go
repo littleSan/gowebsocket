@@ -13,6 +13,8 @@ type Login struct {
 	ServiceToken string `json:"serviceToken"` // 验证用户是否登录
 	AppID        uint32 `json:"appID,omitempty"`
 	UserID       string `json:"userID,omitempty"`
+	Nickname     string `json:"nickname,omitempty"`
+	AvatarUrl    string `json:"avatarUrl,omitempty"`
 }
 
 // HeartBeat 心跳请求数据

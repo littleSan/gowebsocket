@@ -3,6 +3,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/link1st/gowebsocket/v2/lib/database"
+	"github.com/link1st/gowebsocket/v2/lib/ossCli"
 	"io"
 	"net/http"
 	"os"
@@ -10,19 +12,21 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
-
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/link1st/gowebsocket/v2/lib/redislib"
 	"github.com/link1st/gowebsocket/v2/routers"
 	"github.com/link1st/gowebsocket/v2/servers/grpcserver"
 	"github.com/link1st/gowebsocket/v2/servers/task"
 	"github.com/link1st/gowebsocket/v2/servers/websocket"
+	"github.com/spf13/viper"
 )
 
 func main() {
 	initConfig()
 	initFile()
 	initRedis()
+	initDatabase()
+	initAliOss()
 	router := gin.Default()
 
 	// 初始化路由
@@ -38,7 +42,7 @@ func main() {
 
 	// grpc
 	go grpcserver.Init()
-	go open()
+	//go open()
 	httpPort := viper.GetString("app.httpPort")
 	_ = http.ListenAndServe(":"+httpPort, router)
 }
@@ -68,6 +72,14 @@ func initConfig() {
 
 func initRedis() {
 	redislib.NewClient()
+}
+
+func initAliOss() {
+	ossCli.NewOssCli()
+}
+
+func initDatabase() {
+	database.Register()
 }
 
 func open() {

@@ -3,12 +3,13 @@ package websocket
 
 import (
 	"fmt"
+	"github.com/link1st/gowebsocket/v2/models/groupElement"
+	user2 "github.com/link1st/gowebsocket/v2/models/user"
 	"sync"
 	"time"
 
 	"github.com/link1st/gowebsocket/v2/helper"
 	"github.com/link1st/gowebsocket/v2/lib/cache"
-	"github.com/link1st/gowebsocket/v2/models"
 )
 
 // ClientManager 连接管理
@@ -206,8 +207,9 @@ func (manager *ClientManager) EventLogin(login *login) {
 		manager.AddUsers(userKey, login.Client)
 	}
 	fmt.Println("EventLogin 用户登录", client.Addr, login.AppID, login.UserID)
-	orderID := helper.GetOrderIDTime()
-	_, _ = SendUserMessageAll(login.AppID, login.UserID, orderID, models.MessageCmdEnter, "哈喽~")
+	//上线群发消息
+	//orderID := helper.GetOrderIDTime()
+	//_, _ = SendUserMessageAll(login.AppID, login.UserID, orderID, models.MessageCmdEnter, "新人上线多多关照")
 }
 
 // EventUnregister 用户断开连接
@@ -231,10 +233,10 @@ func (manager *ClientManager) EventUnregister(client *Client) {
 	// 关闭 chan
 	// close(client.Send)
 	fmt.Println("EventUnregister 用户断开连接", client.Addr, client.AppID, client.UserID)
-	if client.UserID != "" {
-		orderID := helper.GetOrderIDTime()
-		_, _ = SendUserMessageAll(client.AppID, client.UserID, orderID, models.MessageCmdExit, "用户已经离开~")
-	}
+	//if client.UserID != "" {
+	//	orderID := helper.GetOrderIDTime()
+	//	_, _ = SendUserMessageAll(client.AppID, client.UserID, orderID, models.MessageCmdExit, "用户已经离开~")
+	//}
 }
 
 // 管道处理程序
@@ -316,4 +318,70 @@ func AllSendMessages(appID uint32, userID string, data string) {
 	fmt.Println("全员广播", appID, userID, data)
 	ignoreClient := clientManager.GetUserClient(appID, userID)
 	clientManager.sendAppIDAll([]byte(data), appID, ignoreClient)
+	//非群组消息不进行缓存
+	//msg := &message.Resp{}
+	//err := json.Unmarshal([]byte(data), msg)
+	//if err != nil {
+	//	fmt.Println("解析消息失败", err)
+	//	return
+	//}
+	//if strings.EqualFold(models.MessageCmdGroup, msg.Cmd) {
+	//	SaveOutLineMessage(appID, userID, data)
+	//}
+	SaveOutLineMessage(appID, userID, data)
+
+}
+
+func SaveOutLineMessage(appID uint32, userID string, data string) {
+	//1。获取所有在线用户 2 获取所有用户 3 得到离线用户，离线用户数据放入缓存
+	// 1 获取所有在线用户客户端
+	userList := GetUserList(appID)
+	// 2 获取所有用户
+	user := &user2.UserPO{}
+	allUser, err := user.List(user2.UserPO{Status: 1, AppId: fmt.Sprintf("%d", appID)})
+	if err != nil {
+		fmt.Println("获取所有用户失败", err)
+		return
+	}
+	//获取所有离线用户只判断allUser中的userId 是否存在于 userlist 存在则不是离线用户
+	for _, v := range allUser {
+		if v.UserId == userID {
+			continue
+		}
+		if !helper.InArray(v.UserId, userList) {
+			//离线数据放入缓存
+			_ = cache.PushOfflineMsg(GetUserKey(appID, v.UserId), data)
+		}
+	}
+}
+
+// 向群组发消息
+func groupSendMessages(message string, appID uint32, fromUseId, groupUuid string) {
+	//1 获取群组所有用户 2 获取所有在线连接 3 遍历所有在线连接，判断用户是否在群组中，如果在群组中，则发送消息 4 缓存离线消息
+	//所有群组用户
+	elementCv := new(groupElement.GroupElement)
+	groupUserList, _ := elementCv.List(groupElement.GroupElement{GroupUuid: groupUuid})
+	if len(groupUserList) == 0 {
+		fmt.Println("群组用户为空")
+		return
+	}
+	//所有在线连接
+	userList := GetUserList(appID)
+	//遍历获取所有在线群组用户
+	for _, v := range groupUserList {
+		if v.UserId == fromUseId {
+			continue
+		}
+		if helper.InArray(v.UserId, userList) {
+			client := GetUserClient(appID, v.UserId)
+			if client != nil {
+				client.SendMsg([]byte(message))
+			}
+		} else {
+			//离线数据放入缓存
+			_ = cache.PushOfflineMsg(GetUserKey(appID, v.UserId), message)
+		}
+	}
+	//更新数据信息
+
 }

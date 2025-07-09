@@ -3,6 +3,8 @@ package models
 
 import (
 	"fmt"
+	"github.com/link1st/gowebsocket/v2/models/user"
+	"strings"
 	"time"
 )
 
@@ -24,11 +26,15 @@ type UserOnline struct {
 	Qua           string `json:"qua"`           // qua
 	DeviceInfo    string `json:"deviceInfo"`    // 设备信息
 	IsLogoff      bool   `json:"isLogoff"`      // 是否下线
+	Nickname      string `json:"nickname"`
+	AvatarUrl     string `json:"avatarUrl"`
 }
 
 // UserLogin 用户登录
 func UserLogin(accIp, accPort string, appID uint32, userID string, addr string,
-	loginTime uint64) (userOnline *UserOnline) {
+	loginTime uint64, nickname, avatarUrl string) (userOnline *UserOnline) {
+
+	userID = strings.ToLower(userID)
 	userOnline = &UserOnline{
 		AccIp:         accIp,
 		AccPort:       accPort,
@@ -38,7 +44,24 @@ func UserLogin(accIp, accPort string, appID uint32, userID string, addr string,
 		LoginTime:     loginTime,
 		HeartbeatTime: loginTime,
 		IsLogoff:      false,
+		Nickname:      nickname,
+		AvatarUrl:     avatarUrl,
 	}
+	userPo := &user.UserPO{
+		AccIp:         accIp,
+		AccPort:       accPort,
+		AppId:         fmt.Sprintf("%d", appID),
+		UserId:        userID,
+		ClientIp:      addr,
+		LoginTime:     loginTime,
+		HeartbeatTime: loginTime,
+		CreateTime:    loginTime,
+		IsLogoff:      user.IsLogoffNo,
+		Status:        1,
+		Nickname:      nickname,
+		AvatarUrl:     avatarUrl,
+	}
+	userPo.UserSave()
 	return
 }
 

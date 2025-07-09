@@ -40,11 +40,12 @@ message QueryUsersOnlineRsp {
 message SendMsgReq {
     string seq = 1; // 序列号
     uint32 appID = 2; // appID/房间ID
-    string userID = 3; // 用户ID
+    string fromUserId = 3; // 来源userId
     string cms = 4; // cms 动作: msg/enter/exit
     string type = 5; // type 消息类型，默认是 text
     string msg = 6; // msg
     bool isLocal = 7; // 是否查询本机 acc内部调用为:true(本机查询不到即结束)
+    string targetUserId = 8; //  目标userId
 }
 
 message SendMsgRsp {

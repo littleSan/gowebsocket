@@ -61,3 +61,12 @@ func getIpFromAddr(addr net.Addr) net.IP {
 	}
 	return ip
 }
+
+func InArray(val string, array []string) bool {
+	for _, v := range array {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
